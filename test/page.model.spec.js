@@ -12,6 +12,7 @@ It is passed in as an argument to the callback function, and when invoked, the p
 4) Review of model names vs database names (what do we call class methods on??? findByTag
 
 5) Using "done" vs. returning promises????
+ANSWER: if you RETURN the promises, you don't have to worry about invoking "done"
 */
 
 var expect = require('chai').expect;
@@ -105,10 +106,9 @@ describe('Page Model', function () {
 
             });
         });
-
-
     });
 
+    //more DONE-less syntax
     describe('Instance methods', function () {
         var page1, page2, page3;
 
@@ -141,34 +141,73 @@ describe('Page Model', function () {
 
         describe('findSimilar', function () {
             it('never gets itself', function () {
-                return page1.findSimilar()
-                .then(function(simPages) {
-                    simPage.should.not.include(page1);
+                page1.findSimilar()
+                    .then(function(simPages) {
+                        expect(simPages).to.not.contain.a.thing.with.property('id', page2.id);
                 });
                 
             });
             it('gets other pages with any common tags', function () {
-                 return page1
-                .then(function(basePage) {
-                    return basePage.findSimilar();
-                })
-                .then(function(simPage) {
-                    console.log('this is simPage!!!', simPage);
-                    simPage.should.include(page2);
-                })
+                 page1.findSimilar()
+                    .then(function(simPages) {
+                        expect(simPages).to.have.lengthOf(1);
+                        expect(simPages).to.contain.all.thing.with.property('id', page2.id);
+                    })
             });
 
-            it('does not get other pages without any common tags');
+            it('does not get other pages without any common tags';//(similar)
         });
     });
 
-    // describe('Validations', function () {
-    //     it('errors without title');
-    //     it('errors without content');
-    //     it('errors given an invalid status');
-    // });
+    describe('Validations', function () {
 
-    // describe('Hooks', function () {
-    //     it('it sets urlTitle based on title before validating');
-    // });
+        it('cant submit without title', function() {
+            var page = Page.build({});
+            return page.validate()
+                .then(function(err) {
+                    expect(err).to.exist;
+                    expect(err.errors).to.contain.a.thing.with.property('path', 'title');
+                });
+
+        });
+
+        it('cant submit without content', function(err) {
+
+
+        };
+
+        it('errors given an invalid status', function(err) {
+            var page = Page.build({
+                title: 'zoos',
+                content: '# animals',
+                status: 'not one of the actual options'
+            })
+
+            return page.save()
+                .then(function(err) {
+                    throw Error("I hope this got rejected!!");
+                }, function(err) {
+                    expect(err).to.exist;
+                })
+
+        }
+
+    });
+
+    describe('Hooks', function () {
+        
+        it('it sets urlTitle based on title before validating', function() {
+            var page = Page.build({
+                title: 'The Zoo Rocks',
+                content: 'All of the animal friends are there'
+            })
+
+            return page.save()
+                        .then(function() {
+                            expect(page.urlTitle).to.equal('The_Zoo_Rocks');
+                        })
+        });
+
+
+    });
 });
